@@ -162,13 +162,13 @@ AWS KMS
 
 **IAM Roles & Policies**
 
-```
+
 |Service                | Role              | Permissions
 ─────────────────────┼──────────────────┼──────────────────────────
 |ECS Task Execution   | ecsTaskExecution | CloudWatch Logs, ECR pull
 |ECS Application      | ecsTaskRole      | S3, SQS, Secrets Manager
 |RDS Enhanced Monitor | rds-monitoring   | CloudWatch, Logs
-```
+
 
 **Secrets Manager**
 - Master password stored encrypted
@@ -277,7 +277,7 @@ aws secretsmanager rotate-secret \
 ### **Security Best Practices by Component**
 
 #### **Frontend (Public facing)**
-```
+
 |Threat          | Mitigation
 ────────────────┼──────────────────────────────────
 |DDoS           | AWS Shield + WAF rate limiting
@@ -285,10 +285,10 @@ aws secretsmanager rotate-secret \
 |XSS Attacks    | Input validation, CSP headers
 |SSL/TLS        | ACM certificate on ALB
 |Data Exposure  | No sensitive data in frontend
-```
+
 
 #### **Backend (Private network)**
-```
+
 |Threat          | Mitigation
 ────────────────┼──────────────────────────────────
 |Unauth Access  | Security group restrictions
@@ -296,10 +296,10 @@ aws secretsmanager rotate-secret \
 |API Attacks    | Rate limiting, API keys
 |Container Esc  | Resource limits, read-only FS
 |Log Injection  | CloudWatch Logs validation
-```
+
 
 #### **Database (Highly Restricted)**
-```
+
 |Threat          | Mitigation
 ────────────────┼──────────────────────────────────
 |Unauth Access  | Security group (port 3306 only)
@@ -307,7 +307,7 @@ aws secretsmanager rotate-secret \
 |Data in Transit| SSL/TLS required connections
 |Backup Theft   | Encrypted snapshots
 |Priv Escalation| IAM DB authentication
-```
+
 
 ---
 
