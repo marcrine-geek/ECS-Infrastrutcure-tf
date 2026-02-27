@@ -163,11 +163,11 @@ AWS KMS
 **IAM Roles & Policies**
 
 
-|Service                | Role              | Permissions
-─────────────────────┼──────────────────┼──────────────────────────
-|ECS Task Execution   | ecsTaskExecution | CloudWatch Logs, ECR pull
-|ECS Application      | ecsTaskRole      | S3, SQS, Secrets Manager
-|RDS Enhanced Monitor | rds-monitoring   | CloudWatch, Logs
+|Service                | Role              | Permissions  |
+|─────────────────────┼──────────────────┼──────────────────────────|
+|ECS Task Execution   | ecsTaskExecution | CloudWatch Logs, ECR pull |
+|ECS Application      | ecsTaskRole      | S3, SQS, Secrets Manager|
+|RDS Enhanced Monitor | rds-monitoring   | CloudWatch, Logs|
 
 
 **Secrets Manager**
