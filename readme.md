@@ -21,60 +21,6 @@
 This infrastructure implements a modern, cloud-native architecture designed for high availability, scalability, and reliability. A public Application Load Balancer is fronted by a CloudFront CDN and protected by AWS WAF to provide global caching, DDoS mitigation and centralized security.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                CloudFront CDN + AWS WAF (edge)                 │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Public ALB     │
-                    │  (Port 80/443)  │
-                    └────────┬────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-    ┌───▼──┐            ┌───▼──┐            ┌───▼──┐
-    │ AZ-A │            │ AZ-B │            │ AZ-C │
-    │ (N/A)│            │      │            │      │
-    └──────┘            └──────┘            └──────┘
-        │                    │                    │
-        │    Frontend ECS    │    Frontend ECS   │
-        │    Fargate Tasks   │    Fargate Tasks  │
-        │   (Port 80)        │   (Port 80)       │
-        │                    │                    │
-        └────────────────────┼────────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │ Internal ALB    │
-                    │ (Port 8080)     │
-                    └────────┬────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-    ┌───▼──┐            ┌───▼──┐            ┌───▼──┐
-    │ AZ-A │            │ AZ-B │            │ AZ-C │
-    │      │            │      │            │      │
-    │Backend ECS        │Backend ECS       │      │
-    │ Tasks (8080)      │ Tasks (8080)     │      │
-    └──────┘            └──────┘            └──────┘
-        │                    │
-        └────────────────────┼────────────────────┐
-                             │                    │
-                    ┌────────▼────────┐   ┌──────▼─────┐
-                    │  RDS Primary    │   │ Read Replica│
-                    │  (AZ-A, Multi)  │   │  (AZ-B)    │
-                    │  MySQL + Backup │   │ (Read-only)│
-                    └────────┬────────┘   └────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Secrets Manager│
-                    │  KMS Encryption │
-                    └─────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │   SQS Queues    │
-                    │ (with DLQ)      │
-                    └─────────────────┘
-```
 
 ---
 
@@ -125,7 +71,7 @@ This infrastructure implements a modern, cloud-native architecture designed for 
 #### **Data Protection**
 - **RDS Automated Backups**
   - 30-day retention period
-  - Automated daily snapshots (03:00-04:00 UTC)
+  - Automated daily snapshots
   - Point-in-time recovery capability
   - Final snapshots on instance deletion
   
@@ -168,55 +114,8 @@ This infrastructure implements a modern, cloud-native architecture designed for 
 
 ### **Cost Breakdown (Monthly Estimate - us-east-1)**
 
-#### **Compute - ECS Fargate**
-```
-Frontend:  2 tasks × 256 CPU × $0.01520/hour ≈ $220/month
-Frontend:  2 tasks × 512 MB × $0.00167/hour ≈ $24/month
-Backend:   2 tasks × 512 CPU × $0.03048/hour ≈ $440/month
-Backend:   2 tasks × 1024 MB × $0.00335/hour ≈ $48/month
-────────────────────────────────────────────────────
-Subtotal Compute:                          ≈ $732/month
-```
 
-#### **Load Balancing**
 ```
-Public ALB:    $16.20 + requests           ≈ $25/month
-Internal ALB:  $16.20 + requests           ≈ $25/month
-Data transfer: ~100GB/month × $0.02        ≈ $2/month
-────────────────────────────────────────────────────
-Subtotal ALB: ≈ $52/month
-```
-
-#### **Database - RDS MySQL**
-```
-Primary (db.t3.micro):     $0.022/hour     ≈ $16/month
-Read Replica (db.t3.micro): $0.022/hour    ≈ $16/month
-Storage (40 GB gp3):       $4.60           ≈ $9/month
-Backup Storage:            30GB × $0.023   ≈ $7/month
-────────────────────────────────────────────────────
-Subtotal Database:                         ≈ $48/month
-```
-
-#### **Edge & Security Services**
-```
-CloudFront (100GB):                       ≈ $8.50/month
-AWS WAF (web ACL + rules + requests):     ≈ $10-15/month
-```
-
-#### **Other Services**
-```
-Secrets Manager:                           ≈ $0.40/secret × 2 = $0.80/month
-SQS (2 main + 2 notification queues):      ≈ $0.40/million requests
-KMS Key:                                   ≈ $1.00/month
-NAT Gateway:                               ≈ $32.00/month
-CloudWatch Logs:                           ≈ $10/month
-────────────────────────────────────────────────────
-Subtotal Other:                            ≈ $44/month
-```
-
-**Total Estimated Monthly Cost: ~$910**
-
-### **Cost Optimization Strategies**
 
 ---
 
@@ -235,14 +134,6 @@ This architecture implements multiple layers of security controls following the 
 
 **Security Groups** (Stateful Firewall)
 
-| Resource | Inbound Rules | Outbound Rules | Purpose |
-|----------|--------------|----------------|----------|
-| **Public ALB** | HTTP (80), HTTPS (443) from 0.0.0.0/0 | All traffic | Internet-facing frontend |
-| **Frontend ECS** | All traffic from Public ALB SG | All traffic | Container workloads |
-| **Backend ALB** | Port 8080 from Frontend ECS | All traffic | Internal service communication |
-| **Backend ECS** | All traffic from Backend ALB SG | All traffic | Internal service workloads |
-| **RDS MySQL** | Port 3306 from ECS SGs only | All traffic | Database access control |
-
 **Network ACLs** (Stateless Firewall)
 - Default rules allowing all traffic within VPC
 - Can be enhanced with custom deny rules per subnet
@@ -256,13 +147,7 @@ This architecture implements multiple layers of security controls following the 
 
 **Encryption at Rest**
 ```
-Component          | Encryption | Key Management
-─────────────────┼────────────┼──────────────────
-RDS MySQL        | AES-256    | AWS KMS (Customer Managed)
-SQS Messages     | AES-256    | AWS Managed Key
-Secrets Manager  | AES-256    | AWS KMS
-EBS Volumes      | AES-256    | AWS KMS
-S3 Backups       | AES-256    | AWS KMS
+AWS KMS
 ```
 
 **Encryption in Transit**
@@ -391,15 +276,6 @@ aws secretsmanager rotate-secret \
 - ✅ Resource limits enforced (CPU, memory)
 - ✅ Read-only root filesystem (recommended)
 
-**Container Image Security**
-```dockerfile
-# Recommendations
-FROM public.ecr.aws/docker/library/node:18-alpine  # Minimal base image
-RUN apk add --no-cache curl  # Avoid unnecessary packages
-USER node  # Don't run as root
-RUN npm ci --only=production  # Dependencies only
-```
-
 
 ### **Security Best Practices by Component**
 
@@ -445,16 +321,6 @@ Priv Escalation| IAM DB authentication
 - **Reserved Capacity**: Pre-purchase for stable baseline workloads
 - **Storage Optimization**: gp3 volumes are 20% cheaper than gp2
 
-#### **🎯 Cost Saving Opportunities**
-
-| Optimization | Current | Savings | Effort |
-|-------------|---------|---------|--------|
-| Switch to Fargate Spot for devtest | $732 | $512/mo | Low |
-| Multi-region read replicas removal | +$48 | -$48/mo | Medium |
-| Decrease backup retention to 7 days | 30 days | $2-3/mo | Low |
-| Use ElastiCache for session store | None | $5-10/mo | Medium |
-| Auto-shutdown non-prod at nights | Full 24/7 | $60-80/mo | Low |
-| Consolidate to single AZ (staging) | Multi-AZ | $25/mo | Low |
 
 #### **Pricing Factors by Usage Tier**
 - **0-10M requests/month**: Current setup is optimal
@@ -465,25 +331,23 @@ Priv Escalation| IAM DB authentication
 
 ## 🔧 Infrastructure Components
 
-| Component | Configuration | Purpose |
-|-----------|---------------|---------|
-| **VPC** | 10.0.0.0/16 | Network isolation, CIDR room for 65,536 IPs |
-| **Public Subnets** | 2 (AZ-A, AZ-B) | ALBs, NAT Gateways |
-| **Private Subnets** | 6 (3 per AZ) | ECS tasks, RDS (isolated) |
-| **IGW** | 1 per VPC | Internet access |
-| **NAT Gateway** | 1 (HA via ALB) | Outbound internet for private instances |
-| **Public ALB** | Port 80/443 | External traffic distribution |
-| **Internal ALB** | Port 8080 | Service-to-service communication |
-| **Frontend ECS** | nginx:latest | Containerized frontend (replace image) |
-| **Backend ECS** | nginx:latest | Containerized backend (replace image) |
-| **RDS Primary** | MySQL 8.0.35 | Data persistence with auto-backup |
-| **RDS Read Replica** | MySQL 8.0.35 | Read scaling and DR |
-| **Secrets Manager** | 2 secrets | Password + connection string |
-| **SQS Queues** | 2 main + 2 notification | Async processing with DLQ |
-| **KMS Keys** | 2 (RDS + default) | Encryption at-rest |
-| **CloudWatch** | Logs + Alarms | Monitoring and alerting |
-| **AWS WAF Web ACL** | Managed rules + rate-limit | Edge security for ALB |
-| **CloudFront Distribution** | Origin = Public ALB | Global CDN and caching |
+ - VPC
+ - Public Subnets
+ - Private Subnets
+ - IGW
+ - NAT Gateway
+ - Public ALB
+ - Internal ALB
+ - Frontend ECS
+ - Backend ECS
+ - RDS Primary
+ - RDS Read Replica 
+ - Secrets Manager
+ - SQS Queues
+ - KMS Keys
+ - CloudWatch
+ - AWS WAF Web ACL
+ - CloudFront Distribution
 
 ---
 
@@ -498,7 +362,7 @@ Priv Escalation| IAM DB authentication
 
 ### **Quick Start**
 ```bash
-cd /home/marcrine/Documents/Terraform-Exercise2A
+cd Terraform-Exercise2A
 
 # Initialize Terraform
 terraform init
@@ -523,14 +387,6 @@ terraform output
 ✓ Secrets Manager ARNs:   arn:aws:secretsmanager:us-east-1:xxxx:secret/kasha/rds/...
 ✓ CloudFront Domain Name:  d123456abcdef8.cloudfront.net
 ```
-
-### **Next Steps**
-1. **Update Container Images**: Replace `nginx:latest` with your application images
-2. **Configure Database**: Update initial schema and user credentials in Secrets Manager
-3. **Setup DNS**: Create Route53 records pointing to ALB
-4. **Enable SSL/TLS**: Add HTTPS listener to frontend ALB with ACM certificate
-5. **Implement CI/CD**: Setup CodePipeline for automated deployments
-6. **Configure Monitoring**: Create custom CloudWatch dashboards and SNS alerts
 
 ---
 
