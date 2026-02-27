@@ -20,7 +20,6 @@
 
 This infrastructure implements a modern, cloud-native architecture designed for high availability, scalability, and reliability. A public Application Load Balancer is fronted by a CloudFront CDN and protected by AWS WAF to provide global caching, DDoS mitigation and centralized security.
 
-```
 
 ---
 
@@ -114,8 +113,6 @@ This infrastructure implements a modern, cloud-native architecture designed for 
 
 ### **Cost Breakdown (Monthly Estimate - us-east-1)**
 
-
-```
 
 ---
 
@@ -270,11 +267,11 @@ aws secretsmanager rotate-secret \
 #### **9. Container Security**
 
 **ECS Fargate Best Practices**
-- ✅ No SSH access to tasks (stateless)
-- ✅ Images from private ECR repositories
-- ✅ Image scanning enabled
-- ✅ Resource limits enforced (CPU, memory)
-- ✅ Read-only root filesystem (recommended)
+- No SSH access to tasks (stateless)
+- Images from private ECR repositories
+- Image scanning enabled
+- Resource limits enforced (CPU, memory)
+- Read-only root filesystem (recommended)
 
 
 ### **Security Best Practices by Component**
@@ -390,35 +387,35 @@ terraform output
 
 ---
 
-## 📊 Architecture Pillars
+## Architecture Pillars
 
 ### **Availability**
-✅ Multi-AZ deployment across 2+ availability zones
-✅ Auto-scaling based on CPU and memory metrics
-✅ Automatic health checks and failure recovery
-✅ Load balancing with connection draining
-✅ Database failover in <2 minutes
+- Multi-AZ deployment across 2+ availability zones
+- Auto-scaling based on CPU and memory metrics
+- Automatic health checks and failure recovery
+- Load balancing with connection draining
+- Database failover in <2 minutes
 
 ### **Reliability**
-✅ Encrypted data at-rest and in-transit
-✅ 30-day automated backups with point-in-time recovery
-✅ Dead Letter Queues for failed message handling
-✅ CloudWatch monitoring and alarming
-✅ Version control for secrets and configuration
+- Encrypted data at-rest and in-transit
+- 30-day automated backups with point-in-time recovery
+- Dead Letter Queues for failed message handling
+- CloudWatch monitoring and alarming
+- Version control for secrets and configuration
 
 ### **Cost Efficiency**
-✅ Right-sized instances for workload
-✅ Spot instance eligibility for non-critical workloads
-✅ Reserved capacity recommendations available
-✅ Automatic scaling prevents over-provisioning
-✅ Pay-per-use model (no upfront costs)
+- Right-sized instances for workload
+- Spot instance eligibility for non-critical workloads
+- Reserved capacity recommendations available
+- Automatic scaling prevents over-provisioning
+- Pay-per-use model (no upfront costs)
 
 ### **Security**
-✅ VPC isolation with security groups
-✅ KMS encryption for databases and queues
-✅ Secrets Manager for credential management
-✅ IAM roles with least privilege access
-✅ Private subnets for sensitive workloads
+- VPC isolation with security groups
+- KMS encryption for databases and queues
+- Secrets Manager for credential management
+- IAM roles with least privilege access
+- Private subnets for sensitive workloads
 
 ---
 
