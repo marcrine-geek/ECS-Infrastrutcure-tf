@@ -10,6 +10,7 @@
 - [Availability](#-availability)
 - [Reliability](#-reliability)
 - [Cost Optimization](#-cost-optimization)
+- [Security](#-security)
 - [Infrastructure Components](#infrastructure-components)
 - [Deployment](#deployment)
 
@@ -209,6 +210,260 @@ Subtotal Other:                            ≈ $44/month
 
 ### **Cost Optimization Strategies**
 
+---
+
+## 🔐 Security
+
+### **Defense in Depth Strategy**
+
+This architecture implements multiple layers of security controls following the **AWS Well-Architected Security Pillar**.
+
+#### **1. Network Security**
+
+**VPC Isolation**
+- Dedicated VPC (10.0.0.0/16) for complete network isolation
+- Public and private subnet separation
+- No direct internet access to sensitive resources
+
+**Security Groups** (Stateful Firewall)
+
+| Resource | Inbound Rules | Outbound Rules | Purpose |
+|----------|--------------|----------------|----------|
+| **Public ALB** | HTTP (80), HTTPS (443) from 0.0.0.0/0 | All traffic | Internet-facing frontend |
+| **Frontend ECS** | All traffic from Public ALB SG | All traffic | Container workloads |
+| **Backend ALB** | Port 8080 from Frontend ECS | All traffic | Internal service communication |
+| **Backend ECS** | All traffic from Backend ALB SG | All traffic | Internal service workloads |
+| **RDS MySQL** | Port 3306 from ECS SGs only | All traffic | Database access control |
+
+**Network ACLs** (Stateless Firewall)
+- Default rules allowing all traffic within VPC
+- Can be enhanced with custom deny rules per subnet
+
+**NAT Gateway**
+- Outbound internet access for private instances
+- Masks internal IP addresses from internet
+- Single point of egress for audit logging
+
+#### **2. Data Security**
+
+**Encryption at Rest**
+```
+Component          | Encryption | Key Management
+─────────────────┼────────────┼──────────────────
+RDS MySQL        | AES-256    | AWS KMS (Customer Managed)
+SQS Messages     | AES-256    | AWS Managed Key
+Secrets Manager  | AES-256    | AWS KMS
+EBS Volumes      | AES-256    | AWS KMS
+S3 Backups       | AES-256    | AWS KMS
+```
+
+**Encryption in Transit**
+- Load Balancer → ECS: HTTP (recommendation: upgrade to HTTPS with TLS 1.3)
+- Frontend → Backend: HTTP over private ALB (VPC-internal)
+- RDS Replication: SSL/TLS encrypted
+- Application → Database: SSL required
+
+**Backup Encryption**
+- All RDS snapshots encrypted with same KMS key
+- Final snapshots retained with encryption
+- Read replica shares same encryption key
+
+#### **3. Access Control**
+
+**IAM Roles & Policies**
+
+```
+Service                | Role              | Permissions
+─────────────────────┼──────────────────┼──────────────────────────
+ECS Task Execution   | ecsTaskExecution | CloudWatch Logs, ECR pull
+ECS Application      | ecsTaskRole      | S3, SQS, Secrets Manager
+RDS Enhanced Monitor | rds-monitoring   | CloudWatch, Logs
+```
+
+**Secrets Manager**
+- Master password stored encrypted
+- Connection string includes all credentials
+- 7-day recovery window for accidental deletion
+- Version control for credential rotation
+- Access restricted via IAM policies only
+
+**RDS Authentication Methods**
+```bash
+# Standard method
+mysql -h kasha-mysql-db.xxxxx.rds.amazonaws.com -u admin -p
+
+# IAM Database Authentication (Enhanced)
+aws rds generate-db-auth-token --hostname kasha-mysql-db.xxxxx.rds.amazonaws.com \
+  --port 3306 --region us-east-1 --username admin
+```
+
+#### **4. Logging & Auditing**
+
+**CloudWatch Logs**
+
+| Source | Logs Exported | Retention | Use Case |
+|--------|---------------|-----------|----------|
+| Frontend ECS | Error, General | 7 days | Application debugging |
+| Backend ECS | Error, General | 7 days | Service debugging |
+| RDS MySQL | Error, Slow Query, General | 7 days | Query performance, issues |
+
+**Query Logging**
+- Slow Query Log: Queries > 2 seconds logged
+- General Log: All queries (disable in production)
+- Error Log: Connection failures, warnings
+
+**CloudTrail** (Recommended Addition)
+- Enable for all API calls to infrastructure
+- Logs stored in S3 with encryption
+- 90-day retention in CloudTrail, 7+ years in S3
+
+#### **5. Compliance & Monitoring**
+
+**AWS Config Rules** (Optional - Recommended)
+```terraform
+# Rules to enable:
+- ec2-security-group-open-check
+- rds-encryption-enabled
+- rds-multi-az-enabled
+- kms-key-rotation-enabled
+- cloudwatch-logs-enabled
+```
+
+**Security Monitoring**
+- CloudWatch Alarms on DLQ message arrival
+- Performance Insights for anomaly detection
+- VPC Flow Logs for network traffic analysis
+
+**Compliance Frameworks**
+- **SOC 2 Type II**: Covered by AWS attestation
+- **PCI DSS**: Requires payment card data masking
+- **HIPAA**: Requires additional controls (BAA)
+- **GDPR**: Requires data residency and consent logs
+
+#### **6. DDoS & Rate Limiting**
+
+**AWS Shield Standard** (Automatic)
+- Layer 3 & 4 DDoS protection
+- Free tier included
+- Protection against SYN floods, UDP floods
+
+**AWS WAF** (Optional - Recommended)
+```terraform
+rules = [
+  AWSManagedRulesCommonRuleSet,
+  AWSManagedRulesKnownBadInputsRuleSet,
+  RateLimitRule (2000 requests/5 minutes)
+]
+```
+
+#### **7. Secrets Rotation**
+
+**Database Password Rotation**
+```bash
+# Manual rotation every 90 days
+aws secretsmanager rotate-secret \
+  --secret-id kasha/rds/mysql/admin-password
+```
+
+**KMS Key Rotation**
+- Automatic annual rotation enabled
+- Previous key versions retained for decryption
+- No application downtime
+
+#### **8. Disaster Recovery & Backup Security**
+
+**Backup Strategy**
+- **Retention**: 30 days automated + 7-year archive
+- **Encryption**: All snapshots encrypted
+- **Testing**: Monthly restore tests to separate account
+- **Cross-Region**: Optional replication for regional disaster
+
+**Final Snapshots**
+- Created before any instance termination
+- Timestamped and retained indefinitely
+- Can be restored to new instance if needed
+
+#### **9. Container Security**
+
+**ECS Fargate Best Practices**
+- ✅ No SSH access to tasks (stateless)
+- ✅ Images from private ECR repositories
+- ✅ Image scanning enabled
+- ✅ Resource limits enforced (CPU, memory)
+- ✅ Read-only root filesystem (recommended)
+
+**Container Image Security**
+```dockerfile
+# Recommendations
+FROM public.ecr.aws/docker/library/node:18-alpine  # Minimal base image
+RUN apk add --no-cache curl  # Avoid unnecessary packages
+USER node  # Don't run as root
+RUN npm ci --only=production  # Dependencies only
+```
+
+#### **10. Security Checklist**
+
+**Before Production Deployment**
+
+- [ ] Enable AWS CloudTrail for all API logging
+- [ ] Configure AWS Config with compliance rules
+- [ ] Replace self-signed certificates with ACM certificates
+- [ ] Enable S3 bucket encryption for backups
+- [ ] Configure VPC Flow Logs to CloudWatch/S3
+- [ ] Implement AWS WAF on public ALB
+- [ ] Enable GuardDuty for threat detection
+- [ ] Setup SNS topics for security alerts
+- [ ] Perform security group audit quarterly
+- [ ] Enable MFA on AWS console accounts
+- [ ] Implement resource tagging for cost allocation
+- [ ] Setup Session Manager for ECS task access (no SSH)
+- [ ] Enable RDS Enhanced Monitoring
+- [ ] Configure S3 access logs for audit trail
+- [ ] Implement database activity monitoring (optional)
+
+**Ongoing Security Maintenance**
+- Quarterly: Review IAM permissions, security group rules
+- Monthly: Rotate database passwords, review CloudTrail logs
+- Weekly: Check CloudWatch alarms, DLQ for failures
+- Daily: Monitor CloudWatch dashboards, Performance Insights
+
+### **Security Best Practices by Component**
+
+#### **Frontend (Public facing)**
+```
+Threat          | Mitigation
+────────────────┼──────────────────────────────────
+DDoS           | AWS Shield + WAF rate limiting
+SQL Injection   | Parameterized queries
+XSS Attacks    | Input validation, CSP headers
+SSL/TLS        | ACM certificate on ALB
+Data Exposure  | No sensitive data in frontend
+```
+
+#### **Backend (Private network)**
+```
+Threat          | Mitigation
+────────────────┼──────────────────────────────────
+Unauth Access  | Security group restrictions
+Data Exfil     | VPC Flow Logs monitoring
+API Attacks    | Rate limiting, API keys
+Container Esc  | Resource limits, read-only FS
+Log Injection  | CloudWatch Logs validation
+```
+
+#### **Database (Highly Restricted)**
+```
+Threat          | Mitigation
+────────────────┼──────────────────────────────────
+Unauth Access  | Security group (port 3306 only)
+Data at Rest   | KMS encryption
+Data in Transit| SSL/TLS required connections
+Backup Theft   | Encrypted snapshots
+Priv Escalation| IAM DB authentication
+```
+
+---
+
 #### **✅ Already Implemented**
 - **Spot Instances**: Use Fargate EC2 capacity providers for 70% savings on compute
 - **Right-sizing**: db.t3.micro for non-production, scale as needed
@@ -344,5 +599,3 @@ Created with Terraform for AWS infrastructure automation.
 
 ---
 
-> **Last Updated**: February 2026
-> For support or questions, refer to AWS documentation or contact your DevOps team.
