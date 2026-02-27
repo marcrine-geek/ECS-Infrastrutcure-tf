@@ -162,13 +162,13 @@ AWS KMS
 
 **IAM Roles & Policies**
 
-
-|Service                | Role              | Permissions  |
-|─────────────────────┼──────────────────┼──────────────────────────|
-|ECS Task Execution   | ecsTaskExecution | CloudWatch Logs, ECR pull |
-|ECS Application      | ecsTaskRole      | S3, SQS, Secrets Manager|
-|RDS Enhanced Monitor | rds-monitoring   | CloudWatch, Logs|
-
+```
+Service                | Role              | Permissions
+─────────────────────┼──────────────────┼──────────────────────────
+|ECS Task Execution   | ecsTaskExecution | CloudWatch Logs, ECR pull
+|ECS Application      | ecsTaskRole      | S3, SQS, Secrets Manager
+|RDS Enhanced Monitor | rds-monitoring   | CloudWatch, Logs
+```
 
 **Secrets Manager**
 - Master password stored encrypted
@@ -277,37 +277,37 @@ aws secretsmanager rotate-secret \
 ### **Security Best Practices by Component**
 
 #### **Frontend (Public facing)**
-
-|Threat          | Mitigation
+```
+Threat          | Mitigation
 ────────────────┼──────────────────────────────────
 |DDoS           | AWS Shield + WAF rate limiting
 |SQL Injection   | Parameterized queries
 |XSS Attacks    | Input validation, CSP headers
 |SSL/TLS        | ACM certificate on ALB
 |Data Exposure  | No sensitive data in frontend
-
+```
 
 #### **Backend (Private network)**
-
-|Threat          | Mitigation
+```
+Threat          | Mitigation
 ────────────────┼──────────────────────────────────
 |Unauth Access  | Security group restrictions
 |Data Exfil     | VPC Flow Logs monitoring
 |API Attacks    | Rate limiting, API keys
 |Container Esc  | Resource limits, read-only FS
 |Log Injection  | CloudWatch Logs validation
-
+```
 
 #### **Database (Highly Restricted)**
-
-|Threat          | Mitigation
+```
+Threat          | Mitigation
 ────────────────┼──────────────────────────────────
 |Unauth Access  | Security group (port 3306 only)
 |Data at Rest   | KMS encryption
 |Data in Transit| SSL/TLS required connections
 |Backup Theft   | Encrypted snapshots
-|Priv Escalation| IAM DB authentication
-
+Priv Escalation| IAM DB authentication
+```
 
 ---
 
