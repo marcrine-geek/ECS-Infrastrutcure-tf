@@ -18,11 +18,11 @@
 
 ## 🏗️ Architecture Overview
 
-This infrastructure implements a modern, cloud-native architecture designed for high availability, scalability, and reliability.
+This infrastructure implements a modern, cloud-native architecture designed for high availability, scalability, and reliability. A public Application Load Balancer is fronted by a CloudFront CDN and protected by AWS WAF to provide global caching, DDoS mitigation and centralized security.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Internet (0.0.0.0/0)                     │
+│                CloudFront CDN + AWS WAF (edge)                 │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                     ┌────────▼────────┐
@@ -82,14 +82,16 @@ This infrastructure implements a modern, cloud-native architecture designed for 
 
 ### **99.99% SLA Target**
 
-#### **Load Balancing**
-- **Public ALB** (Frontend): Distributes traffic across multiple AZs
+#### **Load Balancing & Edge**
+- **CloudFront CDN**: Caches content at edge locations globally, reducing latency and origin load.
+- **AWS WAF**: Applied at CloudFront to filter out malicious requests and provide an additional DDoS defense.
+- **Public ALB** (Frontend): Distributes traffic across multiple AZs behind CloudFront
   - Health checks every 30 seconds
   - Automatic unhealthy target removal
   - Connection draining (300s)
   
 - **Internal ALB** (Backend): Private load balancer for service-to-service communication
-  - Also spans multiple AZs
+  - Spans multiple AZs
   - Ensures backend scalability
 
 #### **ECS Fargate Services**
@@ -195,6 +197,12 @@ Backup Storage:            30GB × $0.023   ≈ $7/month
 Subtotal Database:                         ≈ $48/month
 ```
 
+#### **Edge & Security Services**
+```
+CloudFront (100GB):                       ≈ $8.50/month
+AWS WAF (web ACL + rules + requests):     ≈ $10-15/month
+```
+
 #### **Other Services**
 ```
 Secrets Manager:                           ≈ $0.40/secret × 2 = $0.80/month
@@ -206,7 +214,7 @@ CloudWatch Logs:                           ≈ $10/month
 Subtotal Other:                            ≈ $44/month
 ```
 
-**Total Estimated Monthly Cost: ~$876**
+**Total Estimated Monthly Cost: ~$910**
 
 ### **Cost Optimization Strategies**
 
@@ -312,22 +320,9 @@ aws rds generate-db-auth-token --hostname kasha-mysql-db.xxxxx.rds.amazonaws.com
 - General Log: All queries (disable in production)
 - Error Log: Connection failures, warnings
 
-**CloudTrail** (Recommended Addition)
-- Enable for all API calls to infrastructure
-- Logs stored in S3 with encryption
-- 90-day retention in CloudTrail, 7+ years in S3
 
 #### **5. Compliance & Monitoring**
 
-**AWS Config Rules** (Optional - Recommended)
-```terraform
-# Rules to enable:
-- ec2-security-group-open-check
-- rds-encryption-enabled
-- rds-multi-az-enabled
-- kms-key-rotation-enabled
-- cloudwatch-logs-enabled
-```
 
 **Security Monitoring**
 - CloudWatch Alarms on DLQ message arrival
@@ -347,7 +342,11 @@ aws rds generate-db-auth-token --hostname kasha-mysql-db.xxxxx.rds.amazonaws.com
 - Free tier included
 - Protection against SYN floods, UDP floods
 
-**AWS WAF** (Optional - Recommended)
+**CloudFront Edge**
+- First line of defense with edge caching
+- Absorbs and filters large-scale traffic spikes before reaching the ALB
+
+**AWS WAF** (enabled at CloudFront)
 ```terraform
 rules = [
   AWSManagedRulesCommonRuleSet,
@@ -401,31 +400,6 @@ USER node  # Don't run as root
 RUN npm ci --only=production  # Dependencies only
 ```
 
-#### **10. Security Checklist**
-
-**Before Production Deployment**
-
-- [ ] Enable AWS CloudTrail for all API logging
-- [ ] Configure AWS Config with compliance rules
-- [ ] Replace self-signed certificates with ACM certificates
-- [ ] Enable S3 bucket encryption for backups
-- [ ] Configure VPC Flow Logs to CloudWatch/S3
-- [ ] Implement AWS WAF on public ALB
-- [ ] Enable GuardDuty for threat detection
-- [ ] Setup SNS topics for security alerts
-- [ ] Perform security group audit quarterly
-- [ ] Enable MFA on AWS console accounts
-- [ ] Implement resource tagging for cost allocation
-- [ ] Setup Session Manager for ECS task access (no SSH)
-- [ ] Enable RDS Enhanced Monitoring
-- [ ] Configure S3 access logs for audit trail
-- [ ] Implement database activity monitoring (optional)
-
-**Ongoing Security Maintenance**
-- Quarterly: Review IAM permissions, security group rules
-- Monthly: Rotate database passwords, review CloudTrail logs
-- Weekly: Check CloudWatch alarms, DLQ for failures
-- Daily: Monitor CloudWatch dashboards, Performance Insights
 
 ### **Security Best Practices by Component**
 
@@ -508,6 +482,8 @@ Priv Escalation| IAM DB authentication
 | **SQS Queues** | 2 main + 2 notification | Async processing with DLQ |
 | **KMS Keys** | 2 (RDS + default) | Encryption at-rest |
 | **CloudWatch** | Logs + Alarms | Monitoring and alerting |
+| **AWS WAF Web ACL** | Managed rules + rate-limit | Edge security for ALB |
+| **CloudFront Distribution** | Origin = Public ALB | Global CDN and caching |
 
 ---
 
@@ -545,6 +521,7 @@ terraform output
 ✓ Read Replica Endpoint:  kasha-mysql-read-replica.xxxxx.rds.amazonaws.com:3306
 ✓ SQS Queue URLs:         https://sqs.us-east-1.amazonaws.com/xxxx/kasha-queue
 ✓ Secrets Manager ARNs:   arn:aws:secretsmanager:us-east-1:xxxx:secret/kasha/rds/...
+✓ CloudFront Domain Name:  d123456abcdef8.cloudfront.net
 ```
 
 ### **Next Steps**
@@ -589,13 +566,4 @@ terraform output
 
 ---
 
-## 📝 License & Credits
-
-Created with Terraform for AWS infrastructure automation.
-
-**Organization**: Kasha
-**Region**: US-East-1
-**Environment**: Production-ready
-
----
 
