@@ -79,16 +79,6 @@ This infrastructure implements a modern, cloud-native architecture designed for 
   - SQS messages encrypted with AWS managed keys
   - Secrets Manager stores credentials securely
 
-#### **Resilience Patterns**
-
-| Component | Strategy | Recovery |
-|-----------|----------|----------|
-| **Database** | Multi-AZ + Read Replica | Automatic failover + manual promotion |
-| **Frontend** | ECS Auto-scaling + ALB | Automatic task replacement |
-| **Backend** | ECS Auto-scaling + ALB | Automatic task replacement |
-| **Queues** | SQS DLQ | Manual inspection and replay |
-| **Credentials** | Secrets Manager | Version history + recovery window |
-
 #### **Monitoring & Alerting**
 - **CloudWatch Logs**: All containers send logs to CloudWatch
   - Frontend: Error, general logs
@@ -161,14 +151,6 @@ AWS KMS
 #### **3. Access Control**
 
 **IAM Roles & Policies**
-
-```
-Service                | Role              | Permissions
-─────────────────────┼──────────────────┼──────────────────────────
-|ECS Task Execution   | ecsTaskExecution | CloudWatch Logs, ECR pull
-|ECS Application      | ecsTaskRole      | S3, SQS, Secrets Manager
-|RDS Enhanced Monitor | rds-monitoring   | CloudWatch, Logs
-```
 
 **Secrets Manager**
 - Master password stored encrypted
@@ -277,54 +259,29 @@ aws secretsmanager rotate-secret \
 ### **Security Best Practices by Component**
 
 #### **Frontend (Public facing)**
-```
-Threat          | Mitigation
-────────────────┼──────────────────────────────────
-|DDoS           | AWS Shield + WAF rate limiting
-|SQL Injection   | Parameterized queries
-|XSS Attacks    | Input validation, CSP headers
-|SSL/TLS        | ACM certificate on ALB
-|Data Exposure  | No sensitive data in frontend
-```
+
+ - DDoS => AWS Shield + WAF rate limiting
+ - SQL Injection => Parameterized queries
+ - XSS Attacks  => Input validation, CSP headers
+ - SSL/TLS => ACM certificate on ALB
+ - Data Exposure => No sensitive data in frontend
 
 #### **Backend (Private network)**
-```
-Threat          | Mitigation
-────────────────┼──────────────────────────────────
-|Unauth Access  | Security group restrictions
-|Data Exfil     | VPC Flow Logs monitoring
-|API Attacks    | Rate limiting, API keys
-|Container Esc  | Resource limits, read-only FS
-|Log Injection  | CloudWatch Logs validation
-```
+
+ - Unauth Access => Security group restrictions
+ - Data Exfil => VPC Flow Logs monitoring
+ - API Attacks => Rate limiting, API keys
+ - Container Esc => Resource limits, read-only FS
+ - Log Injection =>  CloudWatch Logs validation
 
 #### **Database (Highly Restricted)**
-```
-Threat          | Mitigation
-────────────────┼──────────────────────────────────
-|Unauth Access  | Security group (port 3306 only)
-|Data at Rest   | KMS encryption
-|Data in Transit| SSL/TLS required connections
-|Backup Theft   | Encrypted snapshots
-Priv Escalation| IAM DB authentication
-```
 
----
+ - Unauth Access => Security group (port 3306 only)
+ - Data at Rest => KMS encryption
+ - Data in Transit => SSL/TLS required connections
+ - Backup Theft => Encrypted snapshots
+ - Priv Escalation => IAM DB authentication
 
-#### **✅ Already Implemented**
-- **Spot Instances**: Use Fargate EC2 capacity providers for 70% savings on compute
-- **Right-sizing**: db.t3.micro for non-production, scale as needed
-- **Data Transfer**: Keep traffic within region to avoid cross-region charges
-- **Reserved Capacity**: Pre-purchase for stable baseline workloads
-- **Storage Optimization**: gp3 volumes are 20% cheaper than gp2
-
-
-#### **Pricing Factors by Usage Tier**
-- **0-10M requests/month**: Current setup is optimal
-- **10-50M requests/month**: Consider Aurora MySQL for auto-scaling
-- **50M+ requests/month**: Evaluate DynamoDB or ElastiCache
-
----
 
 ## 🔧 Infrastructure Components
 
