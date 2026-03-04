@@ -43,7 +43,6 @@ This infrastructure implements a modern, cloud-native architecture designed for 
   
 - **Backend**: Minimum 2 tasks across different AZs
   - Auto-scaling: 2-4 instances with same metrics
-  - Larger instance size (512 CPU, 1024 MB) for heavier workloads
 
 #### **Database Layer**
 - **Multi-AZ RDS MySQL**: Primary + standby in different AZ
