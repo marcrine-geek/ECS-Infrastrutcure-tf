@@ -324,38 +324,4 @@ terraform output
 ✓ CloudFront Domain Name:  d123456abcdef8.cloudfront.net
 ```
 
----
-
-## Architecture Pillars
-
-### **Availability**
-- Multi-AZ deployment across 2+ availability zones
-- Auto-scaling based on CPU and memory metrics
-- Automatic health checks and failure recovery
-- Load balancing with connection draining
-- Database failover in <2 minutes
-
-### **Reliability**
-- Encrypted data at-rest and in-transit
-- 30-day automated backups with point-in-time recovery
-- Dead Letter Queues for failed message handling
-- CloudWatch monitoring and alarming
-- Version control for secrets and configuration
-
-### **Cost Efficiency**
-- Right-sized instances for workload
-- Spot instance eligibility for non-critical workloads
-- Reserved capacity recommendations available
-- Automatic scaling prevents over-provisioning
-- Pay-per-use model (no upfront costs)
-
-### **Security**
-- VPC isolation with security groups
-- KMS encryption for databases and queues
-- Secrets Manager for credential management
-- IAM roles with least privilege access
-- Private subnets for sensitive workloads
-
----
-
 
