@@ -181,12 +181,6 @@ aws rds generate-db-auth-token --hostname kasha-mysql-db.xxxxx.rds.amazonaws.com
 - Performance Insights for anomaly detection
 - VPC Flow Logs for network traffic analysis
 
-**Compliance Frameworks**
-- **SOC 2 Type II**: Covered by AWS attestation
-- **PCI DSS**: Requires payment card data masking
-- **HIPAA**: Requires additional controls (BAA)
-- **GDPR**: Requires data residency and consent logs
-
 #### **6. DDoS & Rate Limiting**
 
 **AWS Shield Standard** (Automatic)
