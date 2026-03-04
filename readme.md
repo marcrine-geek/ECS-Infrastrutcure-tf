@@ -1,10 +1,8 @@
 # Kasha Cloud Infrastructure
 
-> A production-ready, highly available AWS architecture for scalable web applications with frontend, backend, and database services.
-
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
 - [Availability](#-availability)
@@ -16,14 +14,14 @@
 
 ---
 
-## 🏗️ Architecture Overview
+##  Architecture Overview
 
 This infrastructure implements a modern, cloud-native architecture designed for high availability, scalability, and reliability. A public Application Load Balancer is fronted by a CloudFront CDN and protected by AWS WAF to provide global caching, DDoS mitigation and centralized security.
 
 
 ---
 
-## 🎯 Availability
+##  Availability
 
 ### **99.99% SLA Target**
 
@@ -63,7 +61,7 @@ This infrastructure implements a modern, cloud-native architecture designed for 
 
 ---
 
-## 🛡️ Reliability
+##  Reliability
 
 ### **Key Reliability Features**
 
@@ -97,16 +95,8 @@ This infrastructure implements a modern, cloud-native architecture designed for 
 - Health checks: Unhealthy tasks automatically replaced
 - Connection pooling: Prevents database connection exhaustion
 
----
 
-## 💰 Cost Optimization
-
-### **Cost Breakdown (Monthly Estimate - us-east-1)**
-
-
----
-
-## 🔐 Security
+##  Security
 
 ### **Defense in Depth Strategy**
 
@@ -283,7 +273,7 @@ aws secretsmanager rotate-secret \
  - Priv Escalation => IAM DB authentication
 
 
-## 🔧 Infrastructure Components
+##  Infrastructure Components
 
  - VPC
  - Public Subnets
@@ -305,7 +295,7 @@ aws secretsmanager rotate-secret \
 
 ---
 
-## 🚀 Deployment
+##  Deployment
 
 ### **Prerequisites**
 ```bash
