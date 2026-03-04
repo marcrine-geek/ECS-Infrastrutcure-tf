@@ -7,7 +7,6 @@
 - [Architecture Overview](#architecture-overview)
 - [Availability](#-availability)
 - [Reliability](#-reliability)
-- [Cost Optimization](#-cost-optimization)
 - [Security](#-security)
 - [Infrastructure Components](#infrastructure-components)
 - [Deployment](#deployment)
