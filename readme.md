@@ -17,7 +17,7 @@
 
 This infrastructure implements a modern, cloud-native architecture designed for high availability, scalability, and reliability. A public Application Load Balancer is fronted by a CloudFront CDN and protected by AWS WAF to provide global caching, DDoS mitigation and centralized security.
 
-![Architecture diagram](Architecture1.jpeg "System architecture")
+![Architecture diagram](Architecture1.jpg "System architecture")
 
 
 ---
